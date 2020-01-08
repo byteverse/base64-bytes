@@ -66,7 +66,7 @@ recodeBoundedBuilder !n (BBU.Builder f) = BBU.Builder
     case f arr off1 s0 of
       (# s1, off2 #) ->
         let !actualLen = off2 -# off1 in
-        case unST (performEncode (MutableByteArray arr) (I# off0) (MutableByteArray arr) (I# off1) (I# actualLen)) s1 of
+        case unST (performEncode (MutableByteArray arr) (I# off0) (MutableByteArray arr) (I# off1) (W# (Exts.int2Word# actualLen))) s1 of
           (# s2, (_ :: ()) #) ->
             let !(I# actualEncLen) = calculatePaddedLength (I# actualLen) in
             (# s2, actualEncLen #)
@@ -83,7 +83,7 @@ performEncodeImmutable ::
   -> Int -- source length
   -> ST s ()
 performEncodeImmutable dst doff (ByteArray src) soff slen =
-  performEncode dst doff (MutableByteArray (Exts.unsafeCoerce# src)) soff slen
+  performEncode dst doff (MutableByteArray (Exts.unsafeCoerce# src)) soff (fromIntegral @Int @Word slen)
 
 -- The function is the meat of this module. Implementation notes:
 --
@@ -108,15 +108,51 @@ performEncodeImmutable dst doff (ByteArray src) soff slen =
 -- guarantees from the compiler since read (unlike index) is sequenced.
 -- These guarantees are important in recodeBoundedBuilder, where the
 -- encoding is performed in-place.
+--
+-- Also, what's the deal with the source length being a Word instead
+-- of an Int. GHC can actually generate code when we do this.
+-- In the cmm stage of compilation, case-on-number constructs
+-- are compiled to lower-level constructs. They become either jump
+-- table or a series of conditionals statements. In our case,
+-- an unsigned number helps GHC realize that it does not need
+-- to test for n<0, although it still must test for n>3.
 performEncode ::
      MutableByteArray s -- dest
   -> Int -- dest off
   -> MutableByteArray s -- src
   -> Int -- src off
-  -> Int -- source length
+  -> Word -- source length
   -> ST s ()
-performEncode !dst !doff !src !soff !slen = if slen >= 4
-  then do
+performEncode !dst !doff !src !soff !slen = case slen of
+  3 -> do
+    x1 <- readByteArray src soff
+    x2 <- readByteArray src (soff + 1)
+    x3 <- readByteArray src (soff + 2)
+    let (w1,w2,w3,w4) = disassembleBE (assembleBE x1 x2 x3 0)
+        c1 = indexOffPtr table (fromIntegral @Word @Int w1)
+        c2 = indexOffPtr table (fromIntegral @Word @Int w2)
+        c3 = indexOffPtr table (fromIntegral @Word @Int w3)
+        c4 = indexOffPtr table (fromIntegral @Word @Int w4)
+    LE.writeUnalignedByteArray dst doff (assembleLE c1 c2 c3 c4)
+  2 -> do
+    x1 <- readByteArray src soff
+    x2 <- readByteArray src (soff + 1)
+    let (w1,w2,w3,_) = disassembleBE (assembleBE x1 x2 0 0)
+        c1 = indexOffPtr table (fromIntegral @Word @Int w1)
+        c2 = indexOffPtr table (fromIntegral @Word @Int w2)
+        c3 = indexOffPtr table (fromIntegral @Word @Int w3)
+        c4 = c2w '='
+    LE.writeUnalignedByteArray dst doff (assembleLE c1 c2 c3 c4)
+  1 -> do
+    x1 <- readByteArray src soff
+    let (w1,w2,_,_) = disassembleBE (assembleBE x1 0 0 0)
+        c1 = indexOffPtr table (fromIntegral @Word @Int w1)
+        c2 = indexOffPtr table (fromIntegral @Word @Int w2)
+        c3 = c2w '='
+        c4 = c2w '='
+    LE.writeUnalignedByteArray dst doff (assembleLE c1 c2 c3 c4)
+  0 -> pure ()
+  _ -> do -- This last case is always slen > 3
     w :: Word32 <- BE.readUnalignedByteArray src soff
     let (w1,w2,w3,w4) = disassembleBE w
         c1 = indexOffPtr table (fromIntegral @Word @Int w1)
@@ -125,35 +161,6 @@ performEncode !dst !doff !src !soff !slen = if slen >= 4
         c4 = indexOffPtr table (fromIntegral @Word @Int w4)
     LE.writeUnalignedByteArray dst doff (assembleLE c1 c2 c3 c4)
     performEncode dst (doff + 4) src (soff + 3) (slen - 3)
-  else case slen of
-    3 -> do
-      x1 <- readByteArray src soff
-      x2 <- readByteArray src (soff + 1)
-      x3 <- readByteArray src (soff + 2)
-      let (w1,w2,w3,w4) = disassembleBE (assembleBE x1 x2 x3 0)
-          c1 = indexOffPtr table (fromIntegral @Word @Int w1)
-          c2 = indexOffPtr table (fromIntegral @Word @Int w2)
-          c3 = indexOffPtr table (fromIntegral @Word @Int w3)
-          c4 = indexOffPtr table (fromIntegral @Word @Int w4)
-      LE.writeUnalignedByteArray dst doff (assembleLE c1 c2 c3 c4)
-    2 -> do
-      x1 <- readByteArray src soff
-      x2 <- readByteArray src (soff + 1)
-      let (w1,w2,w3,_) = disassembleBE (assembleBE x1 x2 0 0)
-          c1 = indexOffPtr table (fromIntegral @Word @Int w1)
-          c2 = indexOffPtr table (fromIntegral @Word @Int w2)
-          c3 = indexOffPtr table (fromIntegral @Word @Int w3)
-          c4 = c2w '='
-      LE.writeUnalignedByteArray dst doff (assembleLE c1 c2 c3 c4)
-    1 -> do
-      x1 <- readByteArray src soff
-      let (w1,w2,_,_) = disassembleBE (assembleBE x1 0 0 0)
-          c1 = indexOffPtr table (fromIntegral @Word @Int w1)
-          c2 = indexOffPtr table (fromIntegral @Word @Int w2)
-          c3 = c2w '='
-          c4 = c2w '='
-      LE.writeUnalignedByteArray dst doff (assembleLE c1 c2 c3 c4)
-    _ -> pure () -- This last case is always slen = 0
 
 -- Argument bytes are hi to lo. The first argument becomes
 -- the least significant component of the result.
