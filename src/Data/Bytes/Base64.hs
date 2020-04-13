@@ -31,8 +31,8 @@ import GHC.Word (Word(W#),Word32(W32#))
 
 import qualified Arithmetic.Nat as Nat
 import qualified Arithmetic.Types as Arithmetic
-import qualified Data.ByteArray.Builder.Unsafe as BU
-import qualified Data.ByteArray.Builder.Bounded.Unsafe as BBU
+import qualified Data.Bytes.Builder.Unsafe as BU
+import qualified Data.Bytes.Builder.Bounded.Unsafe as BBU
 import qualified Data.Primitive.ByteArray.BigEndian as BE
 import qualified Data.Primitive.ByteArray.LittleEndian as LE
 import qualified GHC.Exts as Exts
