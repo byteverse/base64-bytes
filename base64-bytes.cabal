@@ -2,7 +2,6 @@ cabal-version: 2.2
 name: base64-bytes
 version: 0.1.0.0
 synopsis: Base64 encoding of byte sequences
--- description:
 homepage: https://github.com/andrewthad/base64-bytes
 bug-reports: https://github.com/andrewthad/base64-bytes/issues
 license: BSD-3-Clause
