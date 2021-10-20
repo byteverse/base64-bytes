@@ -16,6 +16,7 @@ extra-source-files: CHANGELOG.md
 library
   exposed-modules:
     Data.Bytes.Base64
+    Data.Bytes.Base64.Url
   build-depends:
     , base >=4.12 && <5
     , primitive >=0.7 && <0.8
@@ -37,7 +38,7 @@ test-suite test
     , base
     , base64-bytes
     , natural-arithmetic >=0.1.1
-    , small-bytearray-builder
+    , bytebuild
     , primitive
     , byteslice >=0.1.4.0
   ghc-options: -O2 -Wall

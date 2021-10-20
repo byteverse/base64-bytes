@@ -1,19 +1,25 @@
 {-# language BangPatterns #-}
+{-# language LambdaCase #-}
 
 import Control.Monad (when)
+import Data.Char (ord)
 import Data.Primitive (ByteArray)
 import Data.Word (Word8)
 import Numeric (showHex)
 
 import qualified Arithmetic.Nat as Nat
-import qualified Data.ByteArray.Builder.Bounded as BB
+import qualified Data.Bytes.Builder.Bounded as BB
 import qualified Data.Bytes as Bytes
+import qualified Data.Bytes.Text.Latin1 as Latin1
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
 import qualified Data.Bytes.Base64 as Base64
+import qualified Data.Bytes.Base64.Url as Base64Url
 
 main :: IO ()
 main = do
+  putStr "Base 64 Encoding\n"
+  putStr "================\n"
   putStr "Encoding: foobar\n"
   putStr "Expected: 5a6d3976596d4679 (Zm9vYmFy)\n"
   putStr "Got:      "
@@ -34,6 +40,24 @@ main = do
   putStr "Got:      "
   printHex actualNumbers
   when (actualNumbers /= expectedNumbers) (fail "Did not match")
+  putStr "Base 64 URL Decoding\n"
+  putStr "====================\n"
+  putStr "Decoding: _\n"
+  putStr "Expected: 63\n"
+  underscoreDecodeResult <- case Base64Url.decode64 (Bytes.singleton (c2w '_')) of
+    Nothing -> fail "Could not decode"
+    Just w -> pure w
+  putStr ("Got:      " ++ show underscoreDecodeResult ++ "\n")
+  when (underscoreDecodeResult /= 63) $
+    (fail "Base64 URL decode of single underscore failed")
+  putStr "Decoding: _-a\n"
+  putStr "Expected: 262042\n"
+  urlResB <- case Base64Url.decode64 (Latin1.fromString "_-a") of
+    Nothing -> fail "Could not decode"
+    Just w -> pure w
+  putStr ("Got:      " ++ show urlResB ++ "\n")
+  when (urlResB /= 262042) $
+    (fail "Base64 URL decode of _-a failed")
   putStr "\nAll tests succeeded!\n"
 
 printHex :: ByteArray -> IO ()
@@ -46,13 +70,13 @@ printHex !b = putStr (go 0) where
     else "\n"
 
 actualFoobar :: ByteArray
-actualFoobar = Base64.encode (Bytes.fromAsciiString "foobar")
+actualFoobar = Base64.encode (Latin1.fromString "foobar")
 
 actualHelloworld :: ByteArray
-actualHelloworld = Base64.encode (Bytes.fromAsciiString "helloworld")
+actualHelloworld = Base64.encode (Latin1.fromString "helloworld")
 
 actualCamel :: ByteArray
-actualCamel = Base64.encode (Bytes.fromAsciiString "camel")
+actualCamel = Base64.encode (Latin1.fromString "camel")
 
 actualNumbers :: ByteArray
 actualNumbers = BB.run Nat.constant
@@ -78,3 +102,6 @@ expectedNumbers = Exts.fromList
   [0x4d,0x54,0x49,0x7a,0x4c,0x6a
   ,0x59,0x33,0x4f,0x44,0x6b,0x3d
   ]
+
+c2w :: Char -> Word8
+c2w = fromIntegral . ord
