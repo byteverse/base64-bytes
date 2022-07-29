@@ -1,11 +1,12 @@
+{-# language BangPatterns #-}
 {-# language BinaryLiterals #-}
 {-# language BlockArguments #-}
 {-# language DataKinds #-}
+{-# language ExplicitNamespaces #-}
 {-# language MagicHash #-}
 {-# language NoStarIsType #-}
-{-# language BangPatterns #-}
+{-# language PatternSynonyms #-}
 {-# language ScopedTypeVariables #-}
-{-# language ExplicitNamespaces #-}
 {-# language TypeApplications #-}
 {-# language TypeOperators #-}
 {-# language UnboxedTuples #-}
@@ -28,7 +29,8 @@ import Data.Primitive.Ptr (indexOffPtr)
 import Data.Word (Word8,Word64)
 import GHC.Exts (Ptr(Ptr),Int(I#),State#,(+#),(-#))
 import GHC.ST (ST(ST))
-import GHC.Word (Word(W#),Word32(W32#))
+import GHC.Word (Word(W#),Word32)
+import GHC.Word.Compat (pattern W32#)
 
 import qualified Arithmetic.Nat as Nat
 import qualified Arithmetic.Types as Arithmetic

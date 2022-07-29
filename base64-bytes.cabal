@@ -25,6 +25,7 @@ library
     , run-st >=0.1 && <0.2
     , bytebuild >=0.3.4 && <0.4
     , natural-arithmetic >=0.1.1 && <0.2
+    , word-compat >=0.0.4
   hs-source-dirs: src
   default-language: Haskell2010
   ghc-options: -Wall -O2
