@@ -1,5 +1,4 @@
-{-# language BangPatterns #-}
-{-# language LambdaCase #-}
+{-# LANGUAGE BangPatterns #-}
 
 import Control.Monad (when)
 import Data.Char (ord)
@@ -8,13 +7,13 @@ import Data.Word (Word8)
 import Numeric (showHex)
 
 import qualified Arithmetic.Nat as Nat
-import qualified Data.Bytes.Builder.Bounded as BB
 import qualified Data.Bytes as Bytes
+import qualified Data.Bytes.Base64 as Base64
+import qualified Data.Bytes.Base64.Url as Base64Url
+import qualified Data.Bytes.Builder.Bounded as BB
 import qualified Data.Bytes.Text.Latin1 as Latin1
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
-import qualified Data.Bytes.Base64 as Base64
-import qualified Data.Bytes.Base64.Url as Base64Url
 
 main :: IO ()
 main = do
@@ -61,13 +60,16 @@ main = do
   putStr "\nAll tests succeeded!\n"
 
 printHex :: ByteArray -> IO ()
-printHex !b = putStr (go 0) where
-  go !ix = if ix < PM.sizeofByteArray b
-    then let val = PM.indexByteArray b ix :: Word8 in
-      if val < 16
-        then '0' : showHex val (go (ix + 1))
-        else showHex val (go (ix + 1))
-    else "\n"
+printHex !b = putStr (go 0)
+ where
+  go !ix =
+    if ix < PM.sizeofByteArray b
+      then
+        let val = PM.indexByteArray b ix :: Word8
+         in if val < 16
+              then '0' : showHex val (go (ix + 1))
+              else showHex val (go (ix + 1))
+      else "\n"
 
 actualFoobar :: ByteArray
 actualFoobar = Base64.encode (Latin1.fromString "foobar")
@@ -79,29 +81,57 @@ actualCamel :: ByteArray
 actualCamel = Base64.encode (Latin1.fromString "camel")
 
 actualNumbers :: ByteArray
-actualNumbers = BB.run Nat.constant
-  ( Base64.recodeBoundedBuilder
+actualNumbers =
+  BB.run
     Nat.constant
-    (BB.wordDec 123 `BB.append` BB.ascii '.' `BB.append` BB.wordDec 6789)
-  )
+    ( Base64.recodeBoundedBuilder
+        Nat.constant
+        (BB.wordDec 123 `BB.append` BB.ascii '.' `BB.append` BB.wordDec 6789)
+    )
 
 expectedFoobar :: ByteArray
-expectedFoobar = Exts.fromList [0x5a,0x6d,0x39,0x76,0x59,0x6d,0x46,0x79]
+expectedFoobar = Exts.fromList [0x5a, 0x6d, 0x39, 0x76, 0x59, 0x6d, 0x46, 0x79]
 
 expectedHelloworld :: ByteArray
-expectedHelloworld = Exts.fromList
-  [0x61,0x47,0x56,0x73,0x62,0x47,0x39,0x33
-  ,0x62,0x33,0x4a,0x73,0x5a,0x41,0x3d,0x3d
-  ]
+expectedHelloworld =
+  Exts.fromList
+    [ 0x61
+    , 0x47
+    , 0x56
+    , 0x73
+    , 0x62
+    , 0x47
+    , 0x39
+    , 0x33
+    , 0x62
+    , 0x33
+    , 0x4a
+    , 0x73
+    , 0x5a
+    , 0x41
+    , 0x3d
+    , 0x3d
+    ]
 
 expectedCamel :: ByteArray
-expectedCamel = Exts.fromList [0x59,0x32,0x46,0x74,0x5a,0x57,0x77,0x3d]
+expectedCamel = Exts.fromList [0x59, 0x32, 0x46, 0x74, 0x5a, 0x57, 0x77, 0x3d]
 
 expectedNumbers :: ByteArray
-expectedNumbers = Exts.fromList
-  [0x4d,0x54,0x49,0x7a,0x4c,0x6a
-  ,0x59,0x33,0x4f,0x44,0x6b,0x3d
-  ]
+expectedNumbers =
+  Exts.fromList
+    [ 0x4d
+    , 0x54
+    , 0x49
+    , 0x7a
+    , 0x4c
+    , 0x6a
+    , 0x59
+    , 0x33
+    , 0x4f
+    , 0x44
+    , 0x6b
+    , 0x3d
+    ]
 
 c2w :: Char -> Word8
 c2w = fromIntegral . ord
