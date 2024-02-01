@@ -1,5 +1,9 @@
 # Revision history for base64-bytes
 
+## 0.1.1.1 -- 2024-02-01
+
+* Update package metadata.
+
 ## 0.1.1.0 -- 2022-12-07
 
 * Support GHC 9.2
