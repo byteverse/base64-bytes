@@ -13,8 +13,14 @@ copyright:       2019 Andrew Martin
 category:        Data
 build-type:      Simple
 extra-doc-files: CHANGELOG.md
+tested-with:     GHC ==9.4.8 || ==9.6.3 || ==9.8.1
+
+common build-settings
+  default-language: Haskell2010
+  ghc-options:      -Wall -Wunused-packages
 
 library
+  import:          build-settings
   exposed-modules:
     Data.Bytes.Base64
     Data.Bytes.Base64.Url
@@ -29,15 +35,14 @@ library
     , run-st              >=0.1   && <0.2
     , word-compat         >=0.0.4 && <0.1
 
-  hs-source-dirs:   src
-  default-language: Haskell2010
-  ghc-options:      -Wall -O2
+  hs-source-dirs:  src
+  ghc-options:     -O2
 
 test-suite test
-  default-language: Haskell2010
-  hs-source-dirs:   test
-  main-is:          Main.hs
-  type:             exitcode-stdio-1.0
+  import:         build-settings
+  hs-source-dirs: test
+  main-is:        Main.hs
+  type:           exitcode-stdio-1.0
   build-depends:
     , base
     , base64-bytes
@@ -46,10 +51,9 @@ test-suite test
     , natural-arithmetic  >=0.1.1
     , primitive
 
-  ghc-options:      -O2 -Wall
-
 benchmark bench
-  type:             exitcode-stdio-1.0
+  import:         build-settings
+  type:           exitcode-stdio-1.0
   build-depends:
     , base
     , base64             >=0.3
@@ -61,10 +65,9 @@ benchmark bench
     , primitive
     , random             >=1.1
 
-  ghc-options:      -Wall -O2
-  default-language: Haskell2010
-  hs-source-dirs:   bench
-  main-is:          Main.hs
+  ghc-options:    -O2
+  hs-source-dirs: bench
+  main-is:        Main.hs
 
 source-repository head
   type:     git
